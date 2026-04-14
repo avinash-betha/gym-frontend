@@ -1,0 +1,91 @@
+﻿<div class="page">
+
+  <h1 class="page-title">Profile</h1>
+
+  @if (loading) {
+    <div class="center">
+      <span class="spinner"></span>
+      <span style="font-size:15px;color:#8e8e93">Loading profile...</span>
+    </div>
+  }
+
+  @if (!loading) {
+
+    <!-- Avatar -->
+    <div class="avatar-section">
+      <div class="avatar-wrapper">
+        @if (previewUrl || profilePicUrl) {
+          <img [src]="previewUrl || profilePicUrl" class="avatar" />
+        } @else {
+          <div class="avatar-placeholder">&#x1F4AA;</div>
+        }
+        <label class="avatar-label">
+          <span class="material-icons">photo_camera</span>
+          <input type="file" (change)="onFile($event)" accept="image/*" />
+        </label>
+        @if ((previewUrl || profilePicUrl) && !uploading) {
+          <button class="avatar-remove" (click)="removeProfilePic()" title="Remove photo">
+            <span class="material-icons">close</span>
+          </button>
+        }
+      </div>
+      @if (uploading) {
+        <div class="upload-status">
+          <span class="spinner"></span> Uploading...
+        </div>
+      }
+    </div>
+
+    <!-- Basic Info -->
+    <div class="section-card">
+      <p class="section-title">Basic Info</p>
+      <div class="field-row">
+        <label class="field-label">First Name</label>
+        <input [(ngModel)]="firstName" placeholder="First Name" class="field-input" />
+      </div>
+      <div class="field-row">
+        <label class="field-label">Last Name</label>
+        <input [(ngModel)]="lastName" placeholder="Last Name" class="field-input" />
+      </div>
+      <div class="field-row">
+        <label class="field-label">Email</label>
+        <input [(ngModel)]="email" placeholder="Email" type="email" class="field-input" />
+      </div>
+    </div>
+
+    <!-- Fitness Info -->
+    <div class="section-card">
+      <p class="section-title">Fitness Info</p>
+      <div class="field-row">
+        <label class="field-label">Split Days</label>
+        <input [(ngModel)]="splitDays" type="number" placeholder="Split Days" class="field-input" />
+      </div>
+      <div class="field-row">
+        <label class="field-label">Weight (kg)</label>
+        <input [(ngModel)]="weight" type="number" placeholder="Weight" class="field-input" />
+      </div>
+    </div>
+
+    <!-- Security -->
+    <div class="section-card">
+      <p class="section-title">Security</p>
+      <div class="field-row">
+        <label class="field-label">Old Password</label>
+        <input [(ngModel)]="oldPassword" type="password" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" class="field-input" />
+      </div>
+      <div class="field-row">
+        <label class="field-label">New Password</label>
+        <input [(ngModel)]="newPassword" type="password" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" class="field-input" />
+      </div>
+      <button class="btn btn-secondary" (click)="changePassword()">Change Password</button>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" (click)="save()">Save Profile</button>
+      <button class="btn btn-danger" (click)="logout()">Logout</button>
+    </div>
+
+  }
+
+</div>

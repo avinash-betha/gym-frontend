@@ -1,0 +1,36 @@
+<div class="page">
+
+  <h1 class="page-title">Workout History</h1>
+
+  @if (loading) {
+    <div class="loading-wrap">
+      <span class="spinner"></span>
+      <span class="loading-text">Loading history...</span>
+    </div>
+  }
+
+  @if (!loading && history.length === 0) {
+    <div class="empty-card">
+      <div class="empty-icon">📋</div>
+      <p class="empty-title">No history yet</p>
+      <p class="empty-sub">Complete your first workout to see it here.</p>
+    </div>
+  }
+
+  @if (!loading && history.length > 0) {
+    <div class="history-list">
+      @for (h of history; track h.workoutDate) {
+        <div class="history-card">
+          <div class="history-dot">
+            <span class="material-icons">fitness_center</span>
+          </div>
+          <div class="history-info">
+            <p class="history-date">{{ h.workoutDate }}</p>
+            <p class="history-muscles">{{ h.muscleGroups }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>

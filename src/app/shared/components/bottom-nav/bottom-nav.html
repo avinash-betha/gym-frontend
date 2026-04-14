@@ -1,0 +1,19 @@
+<div class="nav">
+
+  <div (click)="go('dashboard')" class="nav-item" [class.active]="activeRoute.includes('dashboard')">
+    <span class="material-icons">home</span>
+  </div>
+
+  <div (click)="go('history')" class="nav-item" [class.active]="activeRoute.includes('history')">
+    <span class="material-icons">insights</span>
+  </div>
+
+  <div (click)="go('profile')" class="nav-item" [class.active]="activeRoute.includes('profile')">
+    @if (profilePicUrl) {
+      <img [src]="profilePicUrl" class="avatar" />
+    } @else {
+      <span class="material-icons">person</span>
+    }
+  </div>
+
+</div>

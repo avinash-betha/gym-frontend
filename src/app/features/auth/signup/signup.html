@@ -1,0 +1,43 @@
+<div class="signup-page">
+
+  <div class="signup-card">
+
+    <div class="brand">
+      <div class="brand-icon">💪</div>
+      <h1 class="brand-title">GymGuys</h1>
+      <p class="brand-sub">Start your journey.</p>
+    </div>
+
+    @if (error) {
+      <div class="error-banner">{{ error }}</div>
+    }
+
+    <div class="field-group">
+      <label class="field-label">First Name</label>
+      <input [(ngModel)]="firstName" type="text" placeholder="John" class="field-input" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Last Name</label>
+      <input [(ngModel)]="lastName" type="text" placeholder="Doe" class="field-input" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Email</label>
+      <input [(ngModel)]="email" type="email" placeholder="you@example.com" class="field-input" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Password</label>
+      <input [(ngModel)]="password" type="password" placeholder="••••••••" class="field-input" />
+    </div>
+
+    <button class="btn-primary" (click)="signup()" [disabled]="loading">
+      @if (loading) { <span class="spinner"></span> } @else { Create Account }
+    </button>
+
+    <p class="auth-link">Already have an account? <a routerLink="/login">Sign In</a></p>
+
+  </div>
+
+</div>

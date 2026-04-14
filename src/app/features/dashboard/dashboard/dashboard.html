@@ -1,0 +1,83 @@
+<div class="page">
+
+  <p class="greeting">{{ greeting || 'Welcome back' }}</p>
+  <h1 class="page-title">Today's Workout</h1>
+
+  @if (loading) {
+    <div class="skeleton-card">
+      <span class="skeleton-icon"></span>
+      <span class="skeleton-text">Loading your workout...</span>
+    </div>
+  }
+
+  @if (!loading && error) {
+    <div class="error-card">
+      <span class="material-icons error-icon">warning_amber</span>
+      <p class="error-text">{{ error }}</p>
+    </div>
+  }
+
+  @if (!loading && workout) {
+    <div class="workout-card">
+      <div class="card-header">
+        <div class="card-badge">
+          <span class="material-icons">fitness_center</span>
+        </div>
+        <div>
+          <p class="card-title">Day {{ workout.day }}</p>
+          <p class="card-sub">Keep pushing 💪</p>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="info-row">
+        <div>
+          <p class="info-label">Muscle Groups</p>
+          <div class="pills">
+            @for (m of workout.muscleGroups?.split(','); track m) {
+              <span class="pill">{{ m.trim() }}</span>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading && !workout && !error) {
+    <div class="empty-card">
+      <div class="empty-icon">🕛</div>
+      <p class="empty-title">No Workout Yet</p>
+      <p class="empty-sub">Your workout for today will be ready at midnight. Check back soon!</p>
+
+      @if (!requestSent) {
+        <div class="request-section">
+          <p class="request-hint">Need a workout today?</p>
+          <button
+            class="btn-request"
+            (click)="requestWorkout()"
+            [disabled]="requestLoading"
+          >
+            @if (requestLoading) {
+              <span class="mini-spinner"></span>
+              Sending...
+            } @else {
+              <span class="req-icon">⚡</span>
+              Request Workout Now
+            }
+          </button>
+          @if (requestError) {
+            <p class="request-error">{{ requestError }}</p>
+          }
+        </div>
+      }
+
+      @if (requestSent) {
+        <div class="request-sent">
+          <span class="sent-icon">✅</span>
+          <p class="sent-title">Request Sent!</p>
+          <p class="sent-sub">Admin will generate your workout soon. Refresh the page once it's ready.</p>
+        </div>
+      }
+    </div>
+  }
+
+</div>

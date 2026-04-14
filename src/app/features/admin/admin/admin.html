@@ -1,0 +1,436 @@
+<div class="admin-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">⚙️</span>
+      <span class="brand-text">GymGuys Admin</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item" [class.active]="activeTab === 'users'" (click)="setTab('users')">
+        <span class="material-icons">group</span>
+        Users
+      </button>
+      <button class="nav-item" [class.active]="activeTab === 'configs'" (click)="setTab('configs')">
+        <span class="material-icons">fitness_center</span>
+        Workout Configs
+      </button>
+      <button class="nav-item" [class.active]="activeTab === 'requests'" (click)="setTab('requests')">
+        <span class="material-icons">pending_actions</span>
+        Workout Requests
+        @if (requests.length > 0) {
+          <span class="nav-badge">{{ requests.length }}</span>
+        }
+      </button>
+    </nav>
+
+    <button class="logout-btn" (click)="logout()">
+      <span class="material-icons">logout</span>
+      Logout
+    </button>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="admin-main">
+
+    <!-- ═══════════════ USERS TAB ═══════════════ -->
+    @if (activeTab === 'users') {
+      <div class="content-header">
+        <h1 class="content-title">Users</h1>
+        <span class="badge">{{ users.length }} total</span>
+      </div>
+
+      @if (usersLoading) {
+        <div class="state-card">
+          <span class="spinner"></span>
+          <span>Loading users...</span>
+        </div>
+      }
+
+      @if (usersError) {
+        <div class="error-card">
+          <span class="material-icons">warning_amber</span>
+          {{ usersError }}
+        </div>
+      }
+
+      @if (!usersLoading && !usersError) {
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Split Days</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of users; track user.id) {
+                <tr [class.row-suspended]="user.suspended">
+                  <td class="td-id">{{ user.id }}</td>
+                  <td class="td-name">
+                    <div class="user-cell">
+                      <div class="user-avatar" [class.avatar-suspended]="user.suspended">
+                        @if (user.profilePicUrl) {
+                          <img [src]="user.profilePicUrl" class="user-avatar-img" alt="" />
+                        } @else {
+                          {{ user.firstName?.charAt(0) | uppercase }}
+                        }
+                      </div>
+                      <div>
+                        <p class="user-name">{{ user.firstName }} {{ user.lastName }}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="td-email">{{ user.email }}</td>
+                  <td class="td-split">
+                    <div class="inline-edit">
+                      <input
+                        type="number"
+                        min="1" max="7"
+                        class="inline-input"
+                        [(ngModel)]="editingSplit[user.id]"
+                      />
+                      <button
+                        class="btn-sm btn-primary"
+                        (click)="updateSplit(user.id)"
+                        [disabled]="savingId === user.id"
+                      >
+                        @if (savingId === user.id) { <span class="mini-spinner"></span> }
+                        @else { Save }
+                      </button>
+                    </div>
+                  </td>
+                  <td class="td-role">
+                    <div class="inline-edit">
+                      <select class="inline-select" [(ngModel)]="editingRole[user.id]">
+                        <option value="USER">USER</option>
+                        <option value="ADMIN">ADMIN</option>
+                      </select>
+                      <button
+                        class="btn-sm btn-secondary"
+                        (click)="updateRole(user.id)"
+                        [disabled]="savingId === user.id"
+                      >
+                        @if (savingId === user.id) { <span class="mini-spinner"></span> }
+                        @else { Apply }
+                      </button>
+                    </div>
+                  </td>
+                  <td class="td-status">
+                    @if (user.suspended) {
+                      <span class="status-chip chip-suspended">Suspended</span>
+                    } @else {
+                      <span class="status-chip chip-active">Active</span>
+                    }
+                  </td>
+                  <td class="td-actions">
+                    <!-- Edit -->
+                    <button class="btn-icon btn-edit" title="Edit user" (click)="openEdit(user)">
+                      <span class="material-icons">edit</span>
+                    </button>
+                    <!-- Suspend / Unsuspend -->
+                    @if (user.role !== 'ADMIN') {
+                      <button
+                        class="btn-icon"
+                        [class.btn-suspend]="!user.suspended"
+                        [class.btn-unsuspend]="user.suspended"
+                        [title]="user.suspended ? 'Unblock user' : 'Suspend user'"
+                        [disabled]="suspendingId === user.id"
+                        (click)="toggleSuspend(user)"
+                      >
+                        @if (suspendingId === user.id) {
+                          <span class="mini-spinner dark"></span>
+                        } @else {
+                          <span class="material-icons">{{ user.suspended ? 'lock_open' : 'block' }}</span>
+                        }
+                      </button>
+                    }
+                    <!-- Delete -->
+                    @if (user.role !== 'ADMIN') {
+                      <button
+                        class="btn-icon btn-danger"
+                        title="Delete user"
+                        [disabled]="deletingUserId === user.id"
+                        (click)="deleteUser(user.id)"
+                      >
+                        @if (deletingUserId === user.id) {
+                          <span class="mini-spinner"></span>
+                        } @else {
+                          <span class="material-icons">delete_outline</span>
+                        }
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ═══════════════ CONFIGS TAB ═══════════════ -->
+    @if (activeTab === 'configs') {
+      <div class="content-header">
+        <h1 class="content-title">Workout Configs</h1>
+        <span class="badge">{{ configs.length }} configs</span>
+      </div>
+
+      <!-- Add Config Form -->
+      <div class="form-card">
+        <p class="form-title">Add New Config</p>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">Muscle Group</label>
+            <input
+              class="form-input"
+              [(ngModel)]="newMuscleGroup"
+              placeholder="e.g. Chest, Triceps"
+            />
+          </div>
+          <div class="form-field">
+            <label class="form-label">Type</label>
+            <input
+              class="form-input"
+              [(ngModel)]="newType"
+              placeholder="e.g. PUSH / PULL / LEG"
+            />
+          </div>
+          <button
+            class="btn-add"
+            (click)="addConfig()"
+            [disabled]="addingConfig || !newMuscleGroup.trim()"
+          >
+            @if (addingConfig) { <span class="mini-spinner"></span> }
+            @else {
+              <span class="material-icons">add</span>
+              Add
+            }
+          </button>
+        </div>
+      </div>
+
+      @if (configsLoading) {
+        <div class="state-card">
+          <span class="spinner"></span>
+          <span>Loading configs...</span>
+        </div>
+      }
+
+      @if (configsError) {
+        <div class="error-card">
+          <span class="material-icons">warning_amber</span>
+          {{ configsError }}
+        </div>
+      }
+
+      @if (!configsLoading && !configsError) {
+        <div class="configs-grid">
+          @for (cfg of configs; track cfg.id) {
+            <div class="config-card">
+              <div class="config-icon">
+                <span class="material-icons">fitness_center</span>
+              </div>
+              <div class="config-info">
+                <p class="config-muscle">{{ cfg.muscleGroup }}</p>
+                @if (cfg.type) {
+                  <span class="config-type-chip">{{ cfg.type }}</span>
+                }
+              </div>
+              <button
+                class="btn-delete"
+                (click)="deleteConfig(cfg.id)"
+                [disabled]="deletingConfigId === cfg.id"
+                title="Delete config"
+              >
+                @if (deletingConfigId === cfg.id) {
+                  <span class="mini-spinner dark"></span>
+                } @else {
+                  <span class="material-icons">delete_outline</span>
+                }
+              </button>
+            </div>
+          }
+
+          @if (configs.length === 0) {
+            <div class="empty-state">
+              <span class="material-icons empty-icon">inbox</span>
+              <p>No configs yet. Add one above.</p>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- ═══════════════ REQUESTS TAB ═══════════════ -->
+    @if (activeTab === 'requests') {
+      <div class="content-header">
+        <h1 class="content-title">Workout Requests</h1>
+        <span class="badge">{{ requests.length }} pending</span>
+      </div>
+
+      @if (requestsLoading) {
+        <div class="state-card">
+          <span class="spinner"></span>
+          <span>Loading requests...</span>
+        </div>
+      }
+
+      @if (requestsError) {
+        <div class="error-card">
+          <span class="material-icons">warning_amber</span>
+          {{ requestsError }}
+        </div>
+      }
+
+      @if (!requestsLoading && !requestsError && requests.length === 0) {
+        <div class="state-card empty-state">
+          <span class="material-icons empty-icon">check_circle_outline</span>
+          <p>No pending requests — all caught up!</p>
+        </div>
+      }
+
+      @if (!requestsLoading && requests.length > 0) {
+        <div class="requests-list">
+          @for (req of requests; track req.requestId) {
+            <div class="request-card">
+              <div class="req-avatar">{{ req.userName?.charAt(0) | uppercase }}</div>
+              <div class="req-info">
+                <p class="req-name">{{ req.userName }}</p>
+                <p class="req-email">{{ req.userEmail }}</p>
+                <p class="req-time">Requested at {{ req.requestedAt | date:'MMM d, h:mm a' }}</p>
+              </div>
+              <button
+                class="btn-generate"
+                (click)="generateNow(req.userId)"
+                [disabled]="generatingUserId === req.userId"
+              >
+                @if (generatingUserId === req.userId) {
+                  <span class="mini-spinner"></span>
+                  Generating...
+                } @else {
+                  <span class="material-icons">bolt</span>
+                  Generate Now
+                }
+              </button>
+            </div>
+          }
+        </div>
+      }
+    }
+
+  </main>
+
+  <!-- ═══════════════ EDIT USER MODAL ═══════════════ -->
+  @if (showEditModal) {
+    <div class="modal-overlay" (click)="closeEdit()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <h2 class="modal-title">Edit User #{{ editingUser?.id }}</h2>
+          <button class="modal-close" (click)="closeEdit()">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label">First Name</label>
+              <input class="form-input" [(ngModel)]="editForm.firstName" />
+            </div>
+            <div class="form-field">
+              <label class="form-label">Last Name</label>
+              <input class="form-input" [(ngModel)]="editForm.lastName" />
+            </div>
+            <div class="form-field form-full">
+              <label class="form-label">Email</label>
+              <input class="form-input" type="email" [(ngModel)]="editForm.email" />
+            </div>
+            <div class="form-field form-full">
+              <label class="form-label">
+                New Password
+                <span class="form-hint">(leave blank to keep current)</span>
+              </label>
+              <input class="form-input" type="password" [(ngModel)]="editForm.newPassword" placeholder="••••••••" autocomplete="new-password" />
+            </div>
+            <div class="form-field">
+              <label class="form-label">Weight (kg)</label>
+              <input class="form-input" type="number" [(ngModel)]="editForm.weight" />
+            </div>
+            <div class="form-field">
+              <label class="form-label">Split Days</label>
+              <input class="form-input" type="number" min="1" max="7" [(ngModel)]="editForm.splitDays" />
+            </div>
+            <div class="form-field form-full">
+              <label class="form-label">Profile Picture</label>
+              <div class="edit-avatar-section">
+                <div class="edit-avatar-wrapper">
+                  @if (editPreviewUrl || editForm.profilePicUrl) {
+                    <img [src]="editPreviewUrl || editForm.profilePicUrl" class="edit-avatar" />
+                  } @else {
+                    <div class="edit-avatar-placeholder">
+                      {{ editingUser?.firstName?.charAt(0) | uppercase }}
+                    </div>
+                  }
+                  <label class="edit-avatar-label">
+                    @if (editUploading) {
+                      <span class="mini-spinner"></span>
+                    } @else {
+                      <span class="material-icons">photo_camera</span>
+                    }
+                    <input type="file" accept="image/*" (change)="onEditFile($event)" />
+                  </label>
+                  @if ((editPreviewUrl || editForm.profilePicUrl) && !editUploading && !editRemoving) {
+                    <button class="edit-avatar-remove" (click)="removeEditPic()" title="Remove photo">
+                      <span class="material-icons">close</span>
+                    </button>
+                  }
+                  @if (editRemoving) {
+                    <div class="edit-avatar-cover">
+                      <span class="mini-spinner"></span>
+                    </div>
+                  }
+                </div>
+                @if (editUploading) {
+                  <span class="edit-upload-status">Uploading...</span>
+                }
+                @if (editRemoving) {
+                  <span class="edit-upload-status">Removing...</span>
+                }
+              </div>
+            </div>
+            <div class="form-field form-full form-checkbox-row">
+              <input type="checkbox" id="profileCompleted" [(ngModel)]="editForm.profileCompleted" />
+              <label for="profileCompleted">Profile Completed</label>
+            </div>
+          </div>
+
+          @if (saveError) {
+            <p class="save-error">{{ saveError }}</p>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-modal-cancel" (click)="closeEdit()">Cancel</button>
+          <button class="btn-modal-save" (click)="saveEdit()" [disabled]="saving">
+            @if (saving) {
+              <span class="mini-spinner"></span>
+              Saving...
+            } @else {
+              Save Changes
+            }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

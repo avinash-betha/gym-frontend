@@ -1,0 +1,62 @@
+﻿.nav {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 420px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 28px;
+  padding: 10px 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  z-index: 1000;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  min-width: 56px;
+}
+
+.nav-item:active {
+  transform: scale(0.92);
+}
+
+.nav-item .material-icons {
+  font-size: 24px;
+  color: rgba(255,255,255,0.5);
+  transition: color 0.2s;
+}
+
+.nav-item.active .material-icons {
+  color: #0a84ff;
+}
+
+.nav-item.active {
+  background: rgba(10,132,255,0.15);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.3);
+  transition: border-color 0.2s;
+}
+
+.nav-item.active .avatar {
+  border-color: #0a84ff;
+}

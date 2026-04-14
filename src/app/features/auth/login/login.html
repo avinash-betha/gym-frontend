@@ -1,0 +1,33 @@
+<div class="login-page">
+
+  <div class="login-card">
+
+    <div class="brand">
+      <div class="brand-icon">💪</div>
+      <h1 class="brand-title">GymGuys</h1>
+      <p class="brand-sub">Track. Lift. Grow.</p>
+    </div>
+
+    @if (error) {
+      <div class="error-banner">{{ error }}</div>
+    }
+
+    <div class="field-group">
+      <label class="field-label">Email</label>
+      <input [(ngModel)]="email" type="email" placeholder="you@example.com" class="field-input" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Password</label>
+      <input [(ngModel)]="password" type="password" placeholder="••••••••" class="field-input" />
+    </div>
+
+    <button class="btn-primary" (click)="login()" [disabled]="loading">
+      @if (loading) { <span class="spinner"></span> } @else { Sign In }
+    </button>
+
+    <p class="auth-link">New here? <a routerLink="/signup">Create an account</a></p>
+
+  </div>
+
+</div>
