@@ -108,25 +108,20 @@ export class Admin implements OnInit {
   }
 
   updateSplit(userId: number) {
-    this.savingId = userId;
-    this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/split`, {
+    this.updateUserField(userId, 'split', {
       splitDays: this.editingSplit[userId]
-    }).subscribe({
-      next: res => {
-        const idx = this.users.findIndex(u => u.id === userId);
-        if (idx > -1) this.users[idx] = res.data;
-        this.savingId = null;
-        this.cdr.detectChanges();
-      },
-      error: () => { this.savingId = null; this.cdr.detectChanges(); }
     });
   }
 
   updateRole(userId: number) {
-    this.savingId = userId;
-    this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/role`, {
+    this.updateUserField(userId, 'role', {
       role: this.editingRole[userId]
-    }).subscribe({
+    });
+  }
+
+  private updateUserField(userId: number, endpoint: 'split' | 'role', payload: any) {
+    this.savingId = userId;
+    this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/${endpoint}`, payload).subscribe({
       next: res => {
         const idx = this.users.findIndex(u => u.id === userId);
         if (idx > -1) this.users[idx] = res.data;
@@ -211,8 +206,7 @@ export class Admin implements OnInit {
         this.generatingUserId = null;
         this.cdr.detectChanges();
       },
-      error: err => {
-        alert(err?.error?.message || 'Failed to generate workout');
+      error: () => {
         this.generatingUserId = null;
         this.cdr.detectChanges();
       }
@@ -274,7 +268,6 @@ export class Admin implements OnInit {
       },
       error: (err) => {
         console.error('Upload failed:', err);
-        alert(err?.error?.message || err?.message || 'Image upload failed');
         this.editPreviewUrl = '';
         this.zone.run(() => {
           this.editUploading = false;
@@ -304,8 +297,7 @@ export class Admin implements OnInit {
           this.cdr.detectChanges();
         });
       },
-      error: err => {
-        alert(err?.error?.message || 'Failed to remove image');
+      error: () => {
         this.zone.run(() => {
           this.editRemoving = false;
           this.cdr.detectChanges();
@@ -350,8 +342,7 @@ export class Admin implements OnInit {
         this.deletingUserId = null;
         this.cdr.detectChanges();
       },
-      error: err => {
-        alert(err?.error?.message || 'Failed to delete user');
+      error: () => {
         this.deletingUserId = null;
         this.cdr.detectChanges();
       }
@@ -374,8 +365,7 @@ export class Admin implements OnInit {
         this.suspendingId = null;
         this.cdr.detectChanges();
       },
-      error: err => {
-        alert(err?.error?.message || 'Failed to update suspension');
+      error: () => {
         this.suspendingId = null;
         this.cdr.detectChanges();
       }
@@ -386,6 +376,6 @@ export class Admin implements OnInit {
   logout() {
     this.authService.logout();
     localStorage.clear();
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 }

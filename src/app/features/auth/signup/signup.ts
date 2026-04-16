@@ -56,7 +56,6 @@ export class Signup {
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('profilePicUrl', data.profilePicUrl || '');
 
-        console.log("Signup success:", data);
 
         // Always go to profile setup (first-time user)
         this.router.navigate(['/profile']);
