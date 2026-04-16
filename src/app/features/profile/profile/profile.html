@@ -14,14 +14,16 @@
     <!-- Avatar -->
     <div class="avatar-section">
       <div class="avatar-wrapper">
-        @if (previewUrl || profilePicUrl) {
-          <img [src]="previewUrl || profilePicUrl" class="avatar" />
+        @if (previewUrl) {
+          <img [src]="previewUrl" alt="Profile picture" class="avatar" />
+        } @else if (profilePicUrl) {
+          <img [ngSrc]="profilePicUrl" alt="Profile picture" width="96" height="96" class="avatar" />
         } @else {
           <div class="avatar-placeholder">&#x1F4AA;</div>
         }
         <label class="avatar-label">
           <span class="material-icons">photo_camera</span>
-          <input type="file" (change)="onFile($event)" accept="image/*" />
+          <input type="file" (change)="onFile($event); $any($event.target).value = null" accept="image/*" [disabled]="uploading" />
         </label>
         @if ((previewUrl || profilePicUrl) && !uploading) {
           <button class="avatar-remove" (click)="removeProfilePic()" title="Remove photo">

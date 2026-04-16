@@ -2,14 +2,13 @@ import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { SupabaseService } from '../../../core/services/supabase.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, NgOptimizedImage],
   templateUrl: './profile.html',
   styleUrls: ['./profile.css']
 })
@@ -23,7 +22,7 @@ export class Profile implements OnInit {
   splitDays: number | null = null;
   weight: number | null = null;
 
-  profilePicUrl = '';   // URL stored in Supabase / DB
+  profilePicUrl = '';   // Image URL persisted by backend/DB
   previewUrl = '';      // local blob preview while uploading
 
   // Password
@@ -35,7 +34,6 @@ export class Profile implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private supabaseService: SupabaseService,
     private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -113,49 +111,32 @@ export class Profile implements OnInit {
       this.cdr.detectChanges();
     });
 
-    try {
-      const supabase = this.supabaseService.getClient();
-      const filePath = `${userId}/profile.jpg`;
+    const formData = new FormData();
+    formData.append('file', file);
 
-      // Remove old file (ignore if it doesn't exist)
-      const { error: removeError } = await supabase.storage
-        .from('profile-pics')
-        .remove([filePath]);
-      if (removeError) {
-        console.warn('Old image remove failed (may not exist):', removeError.message);
-      }
-
-      // Upload new file
-      const { error: uploadError } = await supabase.storage
-        .from('profile-pics')
-        .upload(filePath, file, {
-          upsert: true,
-          contentType: file.type,
-          cacheControl: '0'
+    this.http.post<any>(
+      `${environment.apiBaseUrl}/api/users/${userId}/profile-pic`,
+      formData
+    ).subscribe({
+      next: (res) => {
+        this.profilePicUrl = res.data.profilePicUrl;
+        localStorage.setItem('profilePicUrl', this.profilePicUrl);
+        this.previewUrl = '';
+        this.zone.run(() => {
+          this.uploading = false;
+          this.cdr.detectChanges();
         });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('profile-pics')
-        .getPublicUrl(filePath);
-
-      // Set the real URL with cache-bust, clear local preview
-      this.profilePicUrl = `${data.publicUrl}?t=${Date.now()}`;
-      this.previewUrl = '';
-      localStorage.setItem('profilePicUrl', this.profilePicUrl);
-
-    } catch (err: any) {
-      console.error('Upload failed:', err);
-      alert(err.message || 'Image upload failed');
-      // Revert preview so UI shows original image
-      this.previewUrl = '';
-    } finally {
-      this.zone.run(() => {
-        this.uploading = false;
-        this.cdr.detectChanges();
-      });
-    }
+      },
+      error: (err) => {
+        console.error('Upload failed:', err);
+        alert(err?.error?.message || err?.message || 'Image upload failed');
+        this.previewUrl = '';
+        this.zone.run(() => {
+          this.uploading = false;
+          this.cdr.detectChanges();
+        });
+      }
+    });
   }
 
   // REMOVE PROFILE PIC
@@ -163,27 +144,23 @@ export class Profile implements OnInit {
     const userId = localStorage.getItem('userId');
     if (!userId) return;
     this.zone.run(() => { this.uploading = true; this.cdr.detectChanges(); });
-    try {
-      const supabase = this.supabaseService.getClient();
-      await supabase.storage.from('profile-pics').remove([`${userId}/profile.jpg`]);
-    } catch (err) {
-      console.warn('Supabase remove error (ignored):', err);
-    }
-    // persist empty URL to DB
-    this.http.put(`${environment.apiBaseUrl}/api/users/${userId}`, {
-      firstName: this.firstName,
-      lastName: this.lastName,
-      email: this.email,
-      splitDays: this.splitDays,
-      weight: this.weight,
-      profilePicUrl: ''
-    }).subscribe({ error: err => console.error('Failed to clear pic in DB', err) });
-    this.zone.run(() => {
-      this.profilePicUrl = '';
-      this.previewUrl = '';
-      localStorage.removeItem('profilePicUrl');
-      this.uploading = false;
-      this.cdr.detectChanges();
+    this.http.delete<any>(`${environment.apiBaseUrl}/api/users/${userId}/profile-pic`).subscribe({
+      next: () => {
+        this.zone.run(() => {
+          this.profilePicUrl = '';
+          this.previewUrl = '';
+          localStorage.removeItem('profilePicUrl');
+          this.uploading = false;
+          this.cdr.detectChanges();
+        });
+      },
+      error: err => {
+        console.error('Failed to clear pic in DB', err);
+        this.zone.run(() => {
+          this.uploading = false;
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 
@@ -207,8 +184,7 @@ export class Profile implements OnInit {
       lastName: this.lastName,
       email: this.email,
       splitDays: this.splitDays,
-      weight: this.weight,
-      profilePicUrl: this.profilePicUrl
+      weight: this.weight
     }).subscribe({
       next: () => {
         localStorage.setItem('firstName', this.firstName);
