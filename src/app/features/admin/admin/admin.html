@@ -77,7 +77,7 @@
                     <div class="user-cell">
                       <div class="user-avatar" [class.avatar-suspended]="user.suspended">
                         @if (user.profilePicUrl) {
-                          <img [src]="user.profilePicUrl" class="user-avatar-img" alt="" />
+                          <img [ngSrc]="user.profilePicUrl" class="user-avatar-img" alt="User profile picture" width="34" height="34" />
                         } @else {
                           {{ user.firstName?.charAt(0) | uppercase }}
                         }
@@ -372,38 +372,25 @@
               <label class="form-label">Profile Picture</label>
               <div class="edit-avatar-section">
                 <div class="edit-avatar-wrapper">
-                  @if (editPreviewUrl || editForm.profilePicUrl) {
-                    <img [src]="editPreviewUrl || editForm.profilePicUrl" class="edit-avatar" />
+                  @if (editPreviewUrl) {
+                    <img [src]="editPreviewUrl" class="edit-avatar" alt="User profile picture" />
+                  } @else if (editingUser?.profilePicUrl) {
+                    <img [ngSrc]="editingUser.profilePicUrl" class="edit-avatar" alt="User profile picture" width="80" height="80" />
                   } @else {
                     <div class="edit-avatar-placeholder">
                       {{ editingUser?.firstName?.charAt(0) | uppercase }}
                     </div>
                   }
                   <label class="edit-avatar-label">
-                    @if (editUploading) {
-                      <span class="mini-spinner"></span>
-                    } @else {
-                      <span class="material-icons">photo_camera</span>
-                    }
-                    <input type="file" accept="image/*" (change)="onEditFile($event)" />
+                    <span class="material-icons">photo_camera</span>
+                    <input type="file" accept="image/*" (change)="onAdminFileSelected($event); $any($event.target).value = null" [disabled]="editUploading" />
                   </label>
-                  @if ((editPreviewUrl || editForm.profilePicUrl) && !editUploading && !editRemoving) {
+                  @if (editingUser?.profilePicUrl) {
                     <button class="edit-avatar-remove" (click)="removeEditPic()" title="Remove photo">
                       <span class="material-icons">close</span>
                     </button>
                   }
-                  @if (editRemoving) {
-                    <div class="edit-avatar-cover">
-                      <span class="mini-spinner"></span>
-                    </div>
-                  }
                 </div>
-                @if (editUploading) {
-                  <span class="edit-upload-status">Uploading...</span>
-                }
-                @if (editRemoving) {
-                  <span class="edit-upload-status">Removing...</span>
-                }
               </div>
             </div>
             <div class="form-field form-full form-checkbox-row">
