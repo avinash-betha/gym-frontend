@@ -3,7 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
+import { finalize } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -31,10 +33,12 @@ export class Profile implements OnInit {
 
   loading = true;
   uploading = false;
+  savingProfile = false;
 
   constructor(
     private http: HttpClient,
     private authService: AuthService,
+    private toast: ToastService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private zone: NgZone
@@ -49,9 +53,15 @@ export class Profile implements OnInit {
     this.loading = true;
 
     this.http.get<any>(`${environment.apiBaseUrl}/api/users/me`)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: res => {
-          const user = res.data;
+          const user = res?.data ?? {};
 
           this.firstName = user.firstName || '';
           this.lastName = user.lastName || '';
@@ -65,14 +75,9 @@ export class Profile implements OnInit {
           if (this.profilePicUrl) {
             localStorage.setItem('profilePicUrl', this.profilePicUrl);
           }
-
-          this.loading = false;
-          this.cdr.detectChanges();
         },
         error: err => {
           console.error("Profile load failed", err);
-          this.loading = false;
-          this.cdr.detectChanges();
         }
       });
   }
@@ -81,7 +86,7 @@ export class Profile implements OnInit {
   logout() {
     this.authService.logout();
     localStorage.clear();
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 
   // IMAGE UPLOAD
@@ -92,7 +97,7 @@ export class Profile implements OnInit {
 
     const userId = localStorage.getItem('userId');
     if (!userId) {
-      alert('User not found. Please login again.');
+      this.toast.showInfo('User not found. Please login again.');
       return;
     }
 
@@ -121,6 +126,7 @@ export class Profile implements OnInit {
       next: (res) => {
         this.profilePicUrl = res.data.profilePicUrl;
         localStorage.setItem('profilePicUrl', this.profilePicUrl);
+        this.toast.showSuccess('Profile picture updated');
         this.previewUrl = '';
         this.zone.run(() => {
           this.uploading = false;
@@ -129,7 +135,6 @@ export class Profile implements OnInit {
       },
       error: (err) => {
         console.error('Upload failed:', err);
-        alert(err?.error?.message || err?.message || 'Image upload failed');
         this.previewUrl = '';
         this.zone.run(() => {
           this.uploading = false;
@@ -150,6 +155,7 @@ export class Profile implements OnInit {
           this.profilePicUrl = '';
           this.previewUrl = '';
           localStorage.removeItem('profilePicUrl');
+          this.toast.showSuccess('Profile picture removed');
           this.uploading = false;
           this.cdr.detectChanges();
         });
@@ -167,17 +173,24 @@ export class Profile implements OnInit {
   // SAVE PROFILE
   save() {
 
+    if (this.savingProfile) {
+      return;
+    }
+
     const userId = localStorage.getItem('userId');
 
     if (!userId) {
-      alert("User not found. Please login again.");
+      this.toast.showInfo('User not found. Please login again.');
       return;
     }
 
     if (!this.splitDays || !this.weight) {
-      alert("Please fill Split Days and Weight");
+      this.toast.showInfo('Please fill Split Days and Weight');
       return;
     }
+
+    this.savingProfile = true;
+    let shouldNavigate = false;
 
     this.http.put(`${environment.apiBaseUrl}/api/users/${userId}`, {
       firstName: this.firstName,
@@ -185,15 +198,21 @@ export class Profile implements OnInit {
       email: this.email,
       splitDays: this.splitDays,
       weight: this.weight
-    }).subscribe({
+    }).pipe(
+      finalize(() => {
+        this.savingProfile = false;
+        this.cdr.detectChanges();
+        if (shouldNavigate) {
+          void this.router.navigate(['/dashboard']);
+        }
+      })
+    ).subscribe({
       next: () => {
         localStorage.setItem('firstName', this.firstName);
-        alert("Profile saved successfully");
-        this.router.navigate(['/dashboard']);
+        this.toast.showSuccess('Profile updated successfully');
+        shouldNavigate = true;
       },
-      error: err => {
-        console.error("Save error:", err);
-        alert("Failed to save profile");
+      error: () => {
       }
     });
   }
@@ -202,7 +221,7 @@ export class Profile implements OnInit {
   changePassword() {
 
     if (!this.oldPassword || !this.newPassword) {
-      alert("Enter both passwords");
+      this.toast.showInfo('Enter both passwords');
       return;
     }
 
@@ -211,13 +230,12 @@ export class Profile implements OnInit {
       newPassword: this.newPassword
     }).subscribe({
       next: () => {
-        alert("Password updated successfully");
+        this.toast.showSuccess('Password updated successfully');
         this.oldPassword = '';
         this.newPassword = '';
       },
       error: err => {
         console.error(err);
-        alert("Failed to update password");
       }
     });
   }

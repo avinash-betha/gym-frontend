@@ -84,7 +84,9 @@
 
     <!-- Actions -->
     <div class="actions">
-      <button class="btn btn-primary" (click)="save()">Save Profile</button>
+      <button class="btn btn-primary" (click)="save()" [disabled]="savingProfile">
+        @if (savingProfile) { <span class="spinner"></span> } @else { Save Profile }
+      </button>
       <button class="btn btn-danger" (click)="logout()">Logout</button>
     </div>
 
