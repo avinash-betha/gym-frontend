@@ -187,6 +187,40 @@
   background: rgba(10,132,255,0.05);
 }
 
+.days-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.day-chip {
+  padding: 10px 14px;
+  border-radius: 20px;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.day-chip.selected {
+  background: #0a84ff;
+  color: #ffffff;
+}
+
+.day-chip.active {
+  background: #0a84ff;
+  color: #ffffff;
+}
+
+.error-text {
+  color: #ff3b30;
+  font-size: 13px;
+  margin: 12px 0 0 0;
+}
+
 /* Buttons */
 .btn {
   width: 100%;

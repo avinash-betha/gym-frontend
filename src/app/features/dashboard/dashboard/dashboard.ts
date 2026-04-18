@@ -1,24 +1,65 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { finalize } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+interface ExerciseMediaDTO {
+  url: string;
+  type: string;
+}
+
+interface ExerciseDTO {
+  id: number;
+  name: string;
+  muscleGroup: string;
+  type: string;
+  media: ExerciseMediaDTO[];
+}
+
+interface WorkoutResponseDTO {
+  day: number;
+  workoutDate: string;
+  muscleGroups: string;
+  workoutType: string;
+  rest: boolean;
+  exercises: ExerciseDTO[];
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+}
+
+interface ExerciseLogEntry {
+  sets: number;
+  reps: number;
+  weight: number;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
 export class Dashboard implements OnInit, OnDestroy {
 
-  workout: any = null;
+  workout: WorkoutResponseDTO | null = null;
   loading = true;
   error = '';
+  noWorkout = false;
   firstName = '';
   greeting = '';
+
+  selectedExerciseId: number | null = null;
+  todayLogsMap: any = {};
+  exerciseInputs: any = {};
+  savedLogs: Record<number, boolean> = {};
 
   requestLoading = false;
   requestSent = false;
@@ -94,42 +135,155 @@ export class Dashboard implements OnInit, OnDestroy {
   loadWorkout() {
     this.loading = true;
     this.error = '';
+    this.noWorkout = false;
+    this.workout = null;
+    this.selectedExerciseId = null;
+    this.exerciseInputs = {};
+    this.todayLogsMap = {};
+    this.savedLogs = {};
 
-    this.http.get<any>(`${environment.apiBaseUrl}/api/workout/today`)
+    this.http.get<ApiResponse<WorkoutResponseDTO>>(`${environment.apiBaseUrl}/api/workout/today`)
       .pipe(
         finalize(() => {
-          // DEBUG #1 — Is loading being set to false?
           this.loading = false;
-          console.log("loading:", this.loading);
-          // Force change detection in case Angular misses the update
           this.cdr.detectChanges();
         })
       )
       .subscribe({
         next: res => {
-          console.log("Full Response:", res);
-
-          // DEBUG #5 — Is API returning empty or null data?
-          console.log("res.data:", res.data);
-
-          if (res.success) {
-            this.workout = res.data;
-            // DEBUG #2 — Is workout assigned properly?
-            console.log("workout assigned:", this.workout);
+          if (res?.success && res.data) {
+            this.noWorkout = false;
+            this.workout = {
+              day: res.data.day,
+              workoutDate: res.data.workoutDate,
+              muscleGroups: res.data.muscleGroups || '',
+              workoutType: res.data.workoutType || '',
+              rest: !!res.data.rest,
+              exercises: Array.isArray(res.data.exercises) ? res.data.exercises : []
+            };
+            this.loadTodayLogs();
           } else {
-            this.error = res.message;
+            this.noWorkout = false;
+            this.error = res?.message || 'Failed to load workout';
           }
         },
         error: err => {
-          console.error("API Error:", err);
-
-          if (err.status === 403) {
+          if (err?.status === 404) {
+            this.workout = null;
+            this.error = '';
+            this.noWorkout = true;
+          } else if (err.status === 403) {
+            this.noWorkout = false;
             this.error = 'Session expired. Please login again.';
           } else {
+            this.noWorkout = false;
             this.error = 'Failed to load workout';
           }
+          this.loading = false;
         }
       });
+  }
+
+  loadTodayLogs() {
+    this.http.get<any>(`${environment.apiBaseUrl}/api/workout/logs/today`).subscribe({
+      next: (res: any) => {
+        if (res?.success && Array.isArray(res.data)) {
+          this.todayLogsMap = {};
+          res.data.forEach((item: any) => {
+            this.todayLogsMap[item.exerciseId] = Array.isArray(item.logs) ? item.logs : [];
+          });
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+      }
+    });
+  }
+
+  toggleExercise(exerciseId: number): void {
+    this.selectedExerciseId = this.selectedExerciseId === exerciseId ? null : exerciseId;
+  }
+
+  isExerciseExpanded(exerciseId: number): boolean {
+    return this.selectedExerciseId === exerciseId;
+  }
+
+  getExerciseInput(exerciseId: number) {
+    if (!this.exerciseInputs[exerciseId]) {
+      this.exerciseInputs[exerciseId] = { sets: '', reps: '', weight: '' };
+    }
+    return this.exerciseInputs[exerciseId];
+  }
+
+  deletingLogId: number | null = null;
+
+  saveExerciseLog(exerciseId: number): void {
+    const input = this.getExerciseInput(exerciseId);
+    const sets = Number(input.sets);
+    const reps = Number(input.reps);
+    const weight = Number(input.weight);
+
+    if (!sets || !reps || !weight) {
+      return;
+    }
+
+    this.http.post<ApiResponse<ExerciseLogEntry>>(`${environment.apiBaseUrl}/api/workout/log`, {
+      exerciseId,
+      sets,
+      reps,
+      weight
+    }).subscribe({
+      next: (res) => {
+        if (res?.success) {
+          this.savedLogs[exerciseId] = true;
+
+          // Optimistically append the new log immediately so UI updates on first save
+          if (!this.todayLogsMap[exerciseId]) {
+            this.todayLogsMap[exerciseId] = [];
+          }
+          this.todayLogsMap[exerciseId] = [...this.todayLogsMap[exerciseId], { sets, reps, weight }];
+          this.exerciseInputs[exerciseId] = {};
+          this.cdr.detectChanges();
+
+          // Sync with backend in the background to keep data accurate
+          this.loadTodayLogs();
+        }
+      },
+      error: () => {
+      }
+    });
+  }
+
+  deleteLog(exerciseId: number, logId: number, index: number): void {
+    if (!logId) {
+      // No backend id yet (optimistically added); remove locally only
+      this.todayLogsMap[exerciseId] = this.todayLogsMap[exerciseId].filter((_: any, i: number) => i !== index);
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.deletingLogId = logId;
+    this.cdr.detectChanges();
+
+    this.http.delete<any>(`${environment.apiBaseUrl}/api/workout/log/${logId}`).subscribe({
+      next: () => {
+        this.todayLogsMap[exerciseId] = this.todayLogsMap[exerciseId].filter((_: any, i: number) => i !== index);
+        this.deletingLogId = null;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.deletingLogId = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  isImageMedia(type: string): boolean {
+    return (type || '').toLowerCase() === 'image';
+  }
+
+  isVideoMedia(type: string): boolean {
+    return (type || '').toLowerCase() === 'video';
   }
 
   requestWorkout() {
