@@ -65,8 +65,19 @@ export class Signup {
 
       error: err => {
         console.error("Signup error:", err);
+        const backendError = err?.error;
 
-        this.error = err?.error?.message || 'Signup failed';
+        if (backendError?.data && typeof backendError.data === 'object') {
+          const messages = Object.values(backendError.data)
+            .flatMap((v: any) => Array.isArray(v) ? v : [v])
+            .map((v: any) => String(v).trim())
+            .filter((v: string) => !!v);
+
+          this.error = messages.join(', ') || backendError?.message || 'Signup failed';
+        } else {
+          this.error = backendError?.message || 'Signup failed';
+        }
+
         this.loading = false;
       }
     });

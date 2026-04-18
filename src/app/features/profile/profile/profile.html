@@ -59,13 +59,27 @@
     <div class="section-card">
       <p class="section-title">Fitness Info</p>
       <div class="field-row">
-        <label class="field-label">Split Days</label>
-        <input [(ngModel)]="splitDays" type="number" placeholder="Split Days" class="field-input" />
-      </div>
-      <div class="field-row">
         <label class="field-label">Weight (kg)</label>
         <input [(ngModel)]="weight" type="number" placeholder="Weight" class="field-input" />
       </div>
+      <div class="field-row">
+        <label class="field-label">Workout Days</label>
+        <div class="days-container">
+          @for (day of days; track day) {
+            <div
+              class="day-chip"
+              [class.active]="selectedDays.includes(day)"
+              (click)="toggleDay(day)"
+            >
+              {{ day.slice(0,3) }}
+            </div>
+          }
+        </div>
+        <p class="split-info">{{ selectedDays.length }} days / week</p>
+      </div>
+      @if (error) {
+        <p class="error-text">{{ error }}</p>
+      }
     </div>
 
     <!-- Security -->
