@@ -1,0 +1,88 @@
+<div class="admin-container">
+  <h2>{{ isEditMode ? 'Edit Exercise' : 'Create Exercise' }}</h2>
+
+  @if (isEditMode) {
+    <div class="edit-banner">
+      Editing Exercise...
+    </div>
+  }
+
+  @if (errorMessage) {
+    <p class="msg msg-error">{{ errorMessage }}</p>
+  }
+
+  @if (successMessage) {
+    <p class="msg msg-success">{{ successMessage }}</p>
+  }
+
+  <input placeholder="Name" [(ngModel)]="form.name" />
+  <input placeholder="Description" [(ngModel)]="form.description" />
+
+  <select [(ngModel)]="form.muscleGroup" (change)="onMuscleChange()">
+    <option value="">Select Muscle</option>
+    <option *ngFor="let m of muscleGroups" [value]="m">{{ m }}</option>
+  </select>
+
+  <select [(ngModel)]="form.targetArea" [disabled]="!targetAreas.length">
+    <option value="">Select Target Area</option>
+    <option *ngFor="let area of targetAreas" [value]="area">{{ area }}</option>
+  </select>
+
+  <select [(ngModel)]="form.type">
+    <option value="">Type</option>
+    <option>COMPOUND</option>
+    <option>ISOLATION</option>
+  </select>
+
+  <input type="file" multiple (change)="onFileSelect($event)" accept="image/*,video/*" />
+
+  <div class="media-label" *ngIf="existingMedia.length">Existing Media</div>
+  <div class="preview-container" *ngIf="existingMedia.length">
+    <div *ngFor="let media of existingMedia; let i = index" class="preview-item">
+      <button type="button" class="remove-btn" (click)="removeExistingMedia(i)" title="Remove">x</button>
+      <img *ngIf="media.type === 'IMAGE'" [src]="media.url" alt="Existing image" />
+      <video *ngIf="media.type === 'VIDEO'" [src]="media.url" controls></video>
+    </div>
+  </div>
+
+  <div class="media-label" *ngIf="previewUrls.length">New Media</div>
+  <div class="preview-container" *ngIf="previewUrls.length">
+    <div *ngFor="let media of previewUrls; let i = index" class="preview-item">
+      <button type="button" class="remove-btn" (click)="removeFile(i)" title="Remove">x</button>
+      <img *ngIf="media.type === 'IMAGE'" [src]="media.url" alt="Preview image" />
+      <video *ngIf="media.type === 'VIDEO'" [src]="media.url" controls></video>
+      <div *ngIf="media.type === 'FILE'" class="file-chip">File {{ i + 1 }}</div>
+    </div>
+  </div>
+
+  <button class="create-btn" type="button" (click)="onSubmit()" [disabled]="creating">
+    @if (creating) {
+      {{ isEditMode ? 'Updating...' : 'Creating...' }}
+    } @else {
+      {{ isEditMode ? 'Update Exercise' : 'Create Exercise' }}
+    }
+  </button>
+
+  <div class="created-list">
+    <div class="list-header">
+      <h3>Exercise Library</h3>
+      <input class="search-input" placeholder="Search by name, muscle or type" [(ngModel)]="searchTerm" />
+    </div>
+
+    <div class="created-item" *ngFor="let item of filteredExercises">
+      <div class="created-main">
+        <p class="created-name">{{ item.name }}</p>
+        <p class="created-meta">{{ item.muscleGroup }} | {{ item.targetArea }} | {{ item.type }}</p>
+      </div>
+      <div class="actions">
+        <button type="button" (click)="editExercise(item)">Edit</button>
+        <button type="button" class="danger" (click)="deleteExercise(item.id)">Delete</button>
+      </div>
+    </div>
+
+    <div class="empty-list" *ngIf="!filteredExercises.length">
+      No exercises found.
+    </div>
+  </div>
+</div>
+
