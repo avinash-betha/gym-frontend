@@ -1,22 +1,22 @@
 import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
-import { SupabaseService } from '../../../core/services/supabase.service';
 import { environment } from '../../../../environments/environment';
+import { AdminExercisesComponent } from '../exercises/admin-exercises.component';
 
 @Component({
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NgOptimizedImage, AdminExercisesComponent],
   templateUrl: './admin.html',
   styleUrls: ['./admin.css']
 })
 export class Admin implements OnInit {
 
-  activeTab: 'users' | 'configs' | 'requests' = 'users';
+  activeTab: 'users' | 'configs' | 'requests' | 'exercises' = 'users';
 
   // ── Users ──────────────────────────────────────────
   users: any[] = [];
@@ -71,7 +71,6 @@ export class Admin implements OnInit {
     private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private supabaseService: SupabaseService,
     private zone: NgZone
   ) {}
 
@@ -82,9 +81,13 @@ export class Admin implements OnInit {
   }
 
   // ── Tab ────────────────────────────────────────────
-  setTab(tab: 'users' | 'configs' | 'requests') {
+  setTab(tab: 'users' | 'configs' | 'requests' | 'exercises') {
     this.activeTab = tab;
     if (tab === 'requests') this.loadRequests();
+  }
+
+  openExercises() {
+    this.setTab('exercises');
   }
 
   // ── Users ──────────────────────────────────────────
@@ -110,25 +113,20 @@ export class Admin implements OnInit {
   }
 
   updateSplit(userId: number) {
-    this.savingId = userId;
-    this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/split`, {
+    this.updateUserField(userId, 'split', {
       splitDays: this.editingSplit[userId]
-    }).subscribe({
-      next: res => {
-        const idx = this.users.findIndex(u => u.id === userId);
-        if (idx > -1) this.users[idx] = res.data;
-        this.savingId = null;
-        this.cdr.detectChanges();
-      },
-      error: () => { this.savingId = null; this.cdr.detectChanges(); }
     });
   }
 
   updateRole(userId: number) {
-    this.savingId = userId;
-    this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/role`, {
+    this.updateUserField(userId, 'role', {
       role: this.editingRole[userId]
-    }).subscribe({
+    });
+  }
+
+  private updateUserField(userId: number, endpoint: 'split' | 'role', payload: any) {
+    this.savingId = userId;
+    this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/${endpoint}`, payload).subscribe({
       next: res => {
         const idx = this.users.findIndex(u => u.id === userId);
         if (idx > -1) this.users[idx] = res.data;
@@ -213,8 +211,7 @@ export class Admin implements OnInit {
         this.generatingUserId = null;
         this.cdr.detectChanges();
       },
-      error: err => {
-        alert(err?.error?.message || 'Failed to generate workout');
+      error: () => {
         this.generatingUserId = null;
         this.cdr.detectChanges();
       }
@@ -232,14 +229,15 @@ export class Admin implements OnInit {
       weight: user.weight ?? null,
       splitDays: user.splitDays ?? null,
       profileCompleted: user.profileCompleted || false,
-      profilePicUrl: user.profilePicUrl || ''
+      profilePicUrl: ''
     };
     this.editPreviewUrl = '';
     this.saveError = '';
     this.showEditModal = true;
   }
 
-  async onEditFile(event: any) {
+
+  onAdminFileSelected(event: any) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -258,28 +256,30 @@ export class Admin implements OnInit {
 
     this.zone.run(() => { this.editUploading = true; this.cdr.detectChanges(); });
 
-    try {
-      const supabase = this.supabaseService.getClient();
-      const filePath = `${userId}/profile.jpg`;
+    const formData = new FormData();
+    formData.append('file', file);
 
-      await supabase.storage.from('profile-pics').remove([filePath]);
-
-      const { error: uploadError } = await supabase.storage
-        .from('profile-pics')
-        .upload(filePath, file, { upsert: true, contentType: file.type, cacheControl: '0' });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('profile-pics').getPublicUrl(filePath);
-      this.editForm.profilePicUrl = `${data.publicUrl}?t=${Date.now()}`;
-      this.editPreviewUrl = '';
-    } catch (err: any) {
-      console.error('Upload failed:', err);
-      alert(err.message || 'Image upload failed');
-      this.editPreviewUrl = '';
-    } finally {
-      this.zone.run(() => { this.editUploading = false; this.cdr.detectChanges(); });
-    }
+    this.http.post<any>(
+      `${environment.apiBaseUrl}/api/admin/users/${userId}/profile-pic`,
+      formData
+    ).subscribe({
+      next: (res) => {
+        this.editingUser.profilePicUrl = res.data.profilePicUrl;
+        this.editPreviewUrl = '';
+        this.zone.run(() => {
+          this.editUploading = false;
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        console.error('Upload failed:', err);
+        this.editPreviewUrl = '';
+        this.zone.run(() => {
+          this.editUploading = false;
+          this.cdr.detectChanges();
+        });
+      }
+    });
   }
 
   closeEdit() {
@@ -291,19 +291,24 @@ export class Admin implements OnInit {
     if (!this.editingUser) return;
     const userId = this.editingUser.id;
     this.zone.run(() => { this.editRemoving = true; this.cdr.detectChanges(); });
-    try {
-      const supabase = this.supabaseService.getClient();
-      await supabase.storage.from('profile-pics').remove([`${userId}/profile.jpg`]);
-    } catch (err) {
-      console.warn('Supabase remove error (ignored):', err);
-    } finally {
-      this.zone.run(() => {
-        this.editForm.profilePicUrl = '';
-        this.editPreviewUrl = '';
-        this.editRemoving = false;
-        this.cdr.detectChanges();
-      });
-    }
+    this.http.delete<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/profile-pic`).subscribe({
+      next: () => {
+        this.zone.run(() => {
+          this.editingUser.profilePicUrl = '';
+          const idx = this.users.findIndex(u => u.id === userId);
+          if (idx > -1) this.users[idx].profilePicUrl = '';
+          this.editPreviewUrl = '';
+          this.editRemoving = false;
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.editRemoving = false;
+          this.cdr.detectChanges();
+        });
+      }
+    });
   }
 
   async saveEdit() {
@@ -311,8 +316,9 @@ export class Admin implements OnInit {
     const userId = this.editingUser.id;
     this.zone.run(() => { this.saving = true; this.saveError = ''; this.cdr.detectChanges(); });
     try {
+      const { profilePicUrl: _profilePicUrl, ...payload } = this.editForm;
       const res = await lastValueFrom(
-        this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/details`, this.editForm)
+        this.http.put<any>(`${environment.apiBaseUrl}/api/admin/users/${userId}/details`, payload)
       );
       this.zone.run(() => {
         const idx = this.users.findIndex(u => u.id === userId);
@@ -341,8 +347,7 @@ export class Admin implements OnInit {
         this.deletingUserId = null;
         this.cdr.detectChanges();
       },
-      error: err => {
-        alert(err?.error?.message || 'Failed to delete user');
+      error: () => {
         this.deletingUserId = null;
         this.cdr.detectChanges();
       }
@@ -365,8 +370,7 @@ export class Admin implements OnInit {
         this.suspendingId = null;
         this.cdr.detectChanges();
       },
-      error: err => {
-        alert(err?.error?.message || 'Failed to update suspension');
+      error: () => {
         this.suspendingId = null;
         this.cdr.detectChanges();
       }
@@ -377,6 +381,6 @@ export class Admin implements OnInit {
   logout() {
     this.authService.logout();
     localStorage.clear();
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 }

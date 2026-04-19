@@ -14,14 +14,16 @@
     <!-- Avatar -->
     <div class="avatar-section">
       <div class="avatar-wrapper">
-        @if (previewUrl || profilePicUrl) {
-          <img [src]="previewUrl || profilePicUrl" class="avatar" />
+        @if (previewUrl) {
+          <img [src]="previewUrl" alt="Profile picture" class="avatar" />
+        } @else if (profilePicUrl) {
+          <img [ngSrc]="profilePicUrl" alt="Profile picture" width="96" height="96" class="avatar" />
         } @else {
           <div class="avatar-placeholder">&#x1F4AA;</div>
         }
         <label class="avatar-label">
           <span class="material-icons">photo_camera</span>
-          <input type="file" (change)="onFile($event)" accept="image/*" />
+          <input type="file" (change)="onFile($event); $any($event.target).value = null" accept="image/*" [disabled]="uploading" />
         </label>
         @if ((previewUrl || profilePicUrl) && !uploading) {
           <button class="avatar-remove" (click)="removeProfilePic()" title="Remove photo">
@@ -57,13 +59,27 @@
     <div class="section-card">
       <p class="section-title">Fitness Info</p>
       <div class="field-row">
-        <label class="field-label">Split Days</label>
-        <input [(ngModel)]="splitDays" type="number" placeholder="Split Days" class="field-input" />
-      </div>
-      <div class="field-row">
         <label class="field-label">Weight (kg)</label>
         <input [(ngModel)]="weight" type="number" placeholder="Weight" class="field-input" />
       </div>
+      <div class="field-row">
+        <label class="field-label">Workout Days</label>
+        <div class="days-container">
+          @for (day of days; track day) {
+            <div
+              class="day-chip"
+              [class.active]="selectedDays.includes(day)"
+              (click)="toggleDay(day)"
+            >
+              {{ day.slice(0,3) }}
+            </div>
+          }
+        </div>
+        <p class="split-info">{{ selectedDays.length }} days / week</p>
+      </div>
+      @if (error) {
+        <p class="error-text">{{ error }}</p>
+      }
     </div>
 
     <!-- Security -->
@@ -82,7 +98,9 @@
 
     <!-- Actions -->
     <div class="actions">
-      <button class="btn btn-primary" (click)="save()">Save Profile</button>
+      <button class="btn btn-primary" (click)="save()" [disabled]="savingProfile">
+        @if (savingProfile) { <span class="spinner"></span> } @else { Save Profile }
+      </button>
       <button class="btn btn-danger" (click)="logout()">Logout</button>
     </div>
 

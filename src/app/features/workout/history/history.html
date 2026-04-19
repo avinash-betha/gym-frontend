@@ -9,7 +9,7 @@
     </div>
   }
 
-  @if (!loading && history.length === 0) {
+  @if (!loading && historyData.length === 0) {
     <div class="empty-card">
       <div class="empty-icon">📋</div>
       <p class="empty-title">No history yet</p>
@@ -17,19 +17,29 @@
     </div>
   }
 
-  @if (!loading && history.length > 0) {
+  @if (!loading && historyData.length > 0) {
+    <p class="history-count">{{ historyData.length }} day{{ historyData.length === 1 ? '' : 's' }} logged</p>
     <div class="history-list">
-      @for (h of history; track h.workoutDate) {
-        <div class="history-card">
-          <div class="history-dot">
-            <span class="material-icons">fitness_center</span>
+      <div *ngFor="let day of historyData" class="history-day-card">
+        <div class="history-date">{{ day.workoutDate | date:'MMM dd, yyyy' }}</div>
+
+        <div *ngFor="let ex of day.exercises" class="history-exercise-card">
+          <div class="exercise-header">
+            <div class="exercise-name">{{ ex.exerciseName }}</div>
+            <div class="muscle-pill">{{ ex.muscleGroup }}</div>
           </div>
-          <div class="history-info">
-            <p class="history-date">{{ h.workoutDate }}</p>
-            <p class="history-muscles">{{ h.muscleGroups }}</p>
+
+          <div class="exercise-meta" *ngIf="ex.logs?.length">
+            {{ ex.logs.length }} set{{ ex.logs.length === 1 ? '' : 's' }}
+          </div>
+
+          <div class="exercise-logs">
+            <div *ngFor="let log of ex.logs; let i = index" class="log-item">
+              Set {{ i + 1 }} -> {{ log.sets }} x {{ log.reps }} &#64; {{ log.weight }}kg
+            </div>
           </div>
         </div>
-      }
+      </div>
     </div>
   }
 

@@ -33,16 +33,124 @@
         <div>
           <p class="info-label">Muscle Groups</p>
           <div class="pills">
-            @for (m of workout.muscleGroups?.split(','); track m) {
+            @for (m of workout.muscleGroups.split(','); track m) {
               <span class="pill">{{ m.trim() }}</span>
             }
           </div>
         </div>
       </div>
+
+      @if (workout.rest) {
+        <div class="exercise-expanded">
+          <p class="empty-title">Rest Day 🧘‍♂️</p>
+          <p class="empty-sub">Recover and come back stronger</p>
+        </div>
+      } @else {
+        @if (!workout.exercises.length) {
+          <p class="empty-sub">No exercises available</p>
+        }
+        <div class="exercise-list">
+          @for (exercise of workout.exercises; track exercise.id) {
+            <div class="exercise-card" (click)="toggleExercise(exercise.id)">
+              <div class="card-header">
+                <div class="card-badge">
+                  <span class="material-icons">sports_gymnastics</span>
+                </div>
+                <div>
+                  <p class="card-title">{{ exercise.name }}</p>
+                  <div class="pills">
+                    <span class="pill">{{ exercise.muscleGroup }}</span>
+                    <span class="pill">{{ exercise.type }}</span>
+                  </div>
+                </div>
+              </div>
+
+              @if (isExerciseExpanded(exercise.id)) {
+                <div class="exercise-expanded" (click)="$event.stopPropagation()">
+                  @if (exercise.media.length) {
+                    <div class="media-carousel">
+                      @for (m of exercise.media; track m.url) {
+                        <div class="media-item">
+                          @if (isImageMedia(m.type)) {
+                            <img [src]="m.url" alt="Exercise media" />
+                          } @else if (isVideoMedia(m.type)) {
+                            <video [src]="m.url" controls></video>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="empty-sub">No media available</div>
+                  }
+
+                  <div class="info-row">
+                    <div>
+                      <p class="info-label">Muscle Group</p>
+                      <p class="info-value">{{ exercise.muscleGroup }}</p>
+                    </div>
+                    <div>
+                      <p class="info-label">Type</p>
+                      <p class="info-value">{{ exercise.type }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-row">
+                    <div>
+                      <p class="info-label">Sets</p>
+                      <input class="field-input" type="number" placeholder="0" [(ngModel)]="getExerciseInput(exercise.id).sets" />
+                    </div>
+                    <div>
+                      <p class="info-label">Reps</p>
+                      <input class="field-input" type="number" placeholder="0" [(ngModel)]="getExerciseInput(exercise.id).reps" />
+                    </div>
+                    <div>
+                      <p class="info-label">Weight</p>
+                      <input class="field-input" type="number" placeholder="0" [(ngModel)]="getExerciseInput(exercise.id).weight" />
+                    </div>
+                  </div>
+
+                  <button class="btn-request" (click)="$event.stopPropagation(); saveExerciseLog(exercise.id)">Save Log</button>
+                  @if (savedLogs[exercise.id]) {
+                    <p class="success-text">Saved ✔</p>
+                  }
+
+                  <div class="logged-sets-section" *ngIf="todayLogsMap[exercise.id]?.length">
+                    <p class="logged-sets-label">Today's Sets</p>
+                    <div class="log-pill-list">
+                      <div class="log-pill" *ngFor="let log of todayLogsMap[exercise.id]; let i = index">
+                        <span class="log-pill-icon">✔</span>
+                        <span class="log-pill-text">
+                          <span class="log-pill-stat">{{ log.sets }}<span class="log-pill-unit"> sets</span></span>
+                          <span class="log-pill-sep">×</span>
+                          <span class="log-pill-stat">{{ log.reps }}<span class="log-pill-unit"> reps</span></span>
+                          <span class="log-pill-sep">&#64;</span>
+                          <span class="log-pill-stat">{{ log.weight }}<span class="log-pill-unit">kg</span></span>
+                        </span>
+                        <button
+                          class="log-delete-btn"
+                          (click)="$event.stopPropagation(); deleteLog(exercise.id, log.id, i)"
+                          [disabled]="deletingLogId === log.id"
+                          title="Remove this set"
+                        >
+                          @if (deletingLogId === log.id) {
+                            <span class="log-delete-spinner"></span>
+                          } @else {
+                            <span class="log-delete-icon">−</span>
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
     </div>
   }
 
-  @if (!loading && !workout && !error) {
+  @if (!loading && noWorkout) {
     <div class="empty-card">
       <div class="empty-icon">🕛</div>
       <p class="empty-title">No Workout Yet</p>

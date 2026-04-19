@@ -11,32 +11,35 @@ import { environment } from '../../../../environments/environment';
 })
 export class History implements OnInit {
 
-  history: any[] = [];
+  historyData: any[] = [];
   loading = true;
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.loadHistory();
   }
 
   loadHistory() {
-
     this.loading = true;
-
-    this.http.get<any>(`${environment.apiBaseUrl}/api/workout/history`)
-      .subscribe({
-        next: res => {
-          console.log("History Response:", res);
-          this.history = res.data || [];
-          this.loading = false;
-          this.cdr.detectChanges();
-        },
-        error: err => {
-          console.error(err);
-          this.loading = false;
-          this.cdr.detectChanges();
+    this.http.get<any>(`${environment.apiBaseUrl}/api/workout/history`).subscribe({
+      next: (res: any) => {
+        if (res?.success) {
+          this.historyData = Array.isArray(res.data) ? res.data : [];
+        } else {
+          this.historyData = [];
         }
-      });
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.historyData = [];
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 }

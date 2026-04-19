@@ -1,8 +1,11 @@
 import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { ChangeDetectorRef } from '@angular/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -17,29 +20,35 @@ export class Login {
   email = '';
   password = '';
   loading = false;
-  error = '';
 
   constructor(
     private http: HttpClient,
     private authService: AuthService,
-    private router: Router
+    private toast: ToastService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   login() {
 
     // basic validation
     if (!this.email || !this.password) {
-      this.error = 'Please enter email and password';
+      this.toast.showError('Please enter email and password');
+      this.loading = false;
       return;
     }
 
     this.loading = true;
-    this.error = '';
 
     this.http.post<any>(`${environment.apiBaseUrl}/api/auth/login`, {
       email: this.email,
       password: this.password
-    }).subscribe({
+    }).pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
       next: res => {
 
         const data = res.data;
@@ -51,25 +60,22 @@ export class Login {
         localStorage.setItem('firstName', data.firstName || '');
         localStorage.setItem('role', data.role || 'USER');
 
-        console.log('Login success:', data);
+        this.toast.showSuccess('Welcome back!');
+
+        this.loading = false;
 
         // Route based on role & profile state
         if (data.role === 'ADMIN') {
-          this.router.navigate(['/admin']);
+          void this.router.navigate(['/admin']);
         } else if (!data.profileCompleted) {
-          this.router.navigate(['/profile']);
+          void this.router.navigate(['/profile']);
         } else {
-          this.router.navigate(['/dashboard']);
+          void this.router.navigate(['/dashboard']);
         }
-
-        this.loading = false;
       },
 
       error: err => {
         console.error("Login error:", err);
-
-        this.error = err?.error?.message || 'Invalid email or password';
-        this.loading = false;
       }
     });
   }
