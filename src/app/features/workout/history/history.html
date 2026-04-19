@@ -9,7 +9,7 @@
     </div>
   }
 
-  @if (!loading && history.length === 0) {
+  @if (!loading && historyData.length === 0) {
     <div class="empty-card">
       <div class="empty-icon">📋</div>
       <p class="empty-title">No history yet</p>
@@ -17,56 +17,29 @@
     </div>
   }
 
-  @if (!loading && history.length > 0) {
-    <p class="history-count">{{ history.length }} session{{ history.length === 1 ? '' : 's' }} logged</p>
+  @if (!loading && historyData.length > 0) {
+    <p class="history-count">{{ historyData.length }} day{{ historyData.length === 1 ? '' : 's' }} logged</p>
     <div class="history-list">
-      @for (h of history; track h.id; let i = $index) {
-        <div class="history-card" [style.animation-delay]="(i * 60) + 'ms'">
+      <div *ngFor="let day of historyData" class="history-day-card">
+        <div class="history-date">{{ day.workoutDate | date:'MMM dd, yyyy' }}</div>
 
-          <!-- Card header row -->
-          <div class="card-header">
-            <div class="day-badge">
-              <span class="material-icons">fitness_center</span>
-              <span>Day {{ h.day }}</span>
-            </div>
-            <span class="card-date">{{ formatDate(h.workoutDate) }}</span>
-            @if (confirmDeleteId !== h.id) {
-              <button
-                class="delete-btn"
-                (click)="confirmDeleteId = h.id"
-                [disabled]="deletingId === h.id"
-                title="Delete log">
-                <span class="material-icons">delete_outline</span>
-              </button>
-            }
+        <div *ngFor="let ex of day.exercises" class="history-exercise-card">
+          <div class="exercise-header">
+            <div class="exercise-name">{{ ex.exerciseName }}</div>
+            <div class="muscle-pill">{{ ex.muscleGroup }}</div>
           </div>
 
-          <!-- Muscle group tags -->
-          <div class="tags-row">
-            @for (muscle of getMuscleList(h.muscleGroups); track muscle) {
-              <span class="muscle-tag">{{ muscle }}</span>
-            }
+          <div class="exercise-meta" *ngIf="ex.logs?.length">
+            {{ ex.logs.length }} set{{ ex.logs.length === 1 ? '' : 's' }}
           </div>
 
-          <!-- Inline delete confirmation -->
-          @if (confirmDeleteId === h.id) {
-            <div class="confirm-row">
-              <span class="confirm-text">Remove this log?</span>
-              <div class="confirm-actions">
-                <button class="btn-cancel" (click)="confirmDeleteId = null">Cancel</button>
-                <button class="btn-delete-confirm" (click)="deleteLog(h.id)" [disabled]="deletingId === h.id">
-                  @if (deletingId === h.id) {
-                    <span class="mini-spinner"></span>
-                  } @else {
-                    <span class="material-icons">delete</span> Delete
-                  }
-                </button>
-              </div>
+          <div class="exercise-logs">
+            <div *ngFor="let log of ex.logs; let i = index" class="log-item">
+              Set {{ i + 1 }} -> {{ log.sets }} x {{ log.reps }} &#64; {{ log.weight }}kg
             </div>
-          }
-
+          </div>
         </div>
-      }
+      </div>
     </div>
   }
 

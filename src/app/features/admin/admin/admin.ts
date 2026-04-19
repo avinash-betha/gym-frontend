@@ -6,16 +6,17 @@ import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { environment } from '../../../../environments/environment';
+import { AdminExercisesComponent } from '../exercises/admin-exercises.component';
 
 @Component({
   standalone: true,
-  imports: [CommonModule, FormsModule, NgOptimizedImage],
+  imports: [CommonModule, FormsModule, NgOptimizedImage, AdminExercisesComponent],
   templateUrl: './admin.html',
   styleUrls: ['./admin.css']
 })
 export class Admin implements OnInit {
 
-  activeTab: 'users' | 'configs' | 'requests' = 'users';
+  activeTab: 'users' | 'configs' | 'requests' | 'exercises' = 'users';
 
   // ── Users ──────────────────────────────────────────
   users: any[] = [];
@@ -80,9 +81,13 @@ export class Admin implements OnInit {
   }
 
   // ── Tab ────────────────────────────────────────────
-  setTab(tab: 'users' | 'configs' | 'requests') {
+  setTab(tab: 'users' | 'configs' | 'requests' | 'exercises') {
     this.activeTab = tab;
     if (tab === 'requests') this.loadRequests();
+  }
+
+  openExercises() {
+    this.setTab('exercises');
   }
 
   // ── Users ──────────────────────────────────────────
